@@ -5,22 +5,38 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
     function register(Request $request )
     {
+        $request->validate([
+            'username' => 'required|max:25',
+            'email' => 'required|unique:users',
+            'password' => 'required',
+        ]);
+        /*
     $user = new User();
     $user->name= $request->username;
     $user->email= $request->email;
     $user->password =Hash::make($request->password);
     $user->save();
+    */
+    DB::table('users')->insertOrIgnore(
+
+            ['name'=>$request->username,
+            'email'=>$request->email,
+            'password'=>Hash::make($request->password)]
+
+        );
     return redirect('/login');
     }
 
     function login(Request $request)
     {
         $user = User::where(['email'=>$request->email])->first();
+        //$user = User::findOrFail($request);
         if(!$user || !Hash::check($request->password,$user->password))
         {
             return "Username or password is incorrect";
@@ -28,17 +44,94 @@ class UserController extends Controller
         else
         {
             $request->session()->put('user',$user);
-          return  redirect('/');
+          return  redirect('/home');
         }
-       
+
     }
 
     function users()
     {
-        $users = User::all();
+        //query builder
+        $users= DB::table('users')->distinct()->orderBy('id','DESC')->get();
+       /*
+        $users= DB::table('users')->orderBy('id','DESC')->get();
+        */
+        $counts = DB::table('users')->count();
+        $min = DB::table('users')->min('id');
+        $max = DB::table('users')->max('id');
+        $avg = DB::table('users')->average('id');
+
+        $users_chunk= DB::table('users')->orderBy('name','desc')->chunk(3, function ($userss)
+                          {
+                          return $userss;
+                          });
+
+          $users = DB::table('users')->paginate(6);
+        return view('users',['users'=>$users,
+                            'counts'=>$counts,
+                            'min'=>$min,'max'=>$max,
+                            'avg'=>$avg,'users_chunk'=>$users_chunk]);
+        //$users = User::all();
         //return view('users', ['users' => $users]);
         //return view('users')->with('users', $users);
-        return view('users',compact('users'));
+        //return view('users',compact('users'));
         //return $users;
+    }
+    function show($id)
+    {
+        $user = DB::table('users')->find($id);
+        if(!$user)
+        return "Not found";
+        else
+        return  $user;
+       // $user = User::findOrFail($id);
+        /*
+        $user = DB::table('users')->where('id',$id)->get();
+                    */
+                    /*
+        $user = DB::table('users')->select('name','email')->where('id',$id)->get();
+                */
+                /*
+                $user = DB::table('users')->where('id','<>',$id)->get();
+                */
+             /*
+                $user = DB::table('users')->whereNotNull('updated_at')->get();
+                */
+                /*
+                $user = DB::table('users')->latest()->first();
+                */
+                /*
+                $user = DB::table('users')->groupBy('name')->having('id', '>', 2)->get();
+                */
+        //  $user = DB::table('users')->distinct()->get();
+        return $user;
+
+        //return view('show',['user'=>$user]);
+    }
+    function update(Request $request)
+    {
+
+       //return $request->name;
+        /*
+        $user   = new User();
+        $user = $request->username;
+        $user = $request->email;
+        $user = Hash::make($request->password);
+        $user->save();
+        */
+        $user = DB::table('users')
+              ->where('id', $request->id)
+              ->update(
+                ['name' => $request->name,
+                'email' => $request->email]
+                );
+       //return $user;
+        return redirect('users');
+    }
+
+    function delete($id)
+    {
+        DB::table('users')->where('id',$id)->delete();
+        return redirect('users');
     }
 }
