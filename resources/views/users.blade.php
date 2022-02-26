@@ -1,10 +1,8 @@
 @extends('app')
 @section('content')
-<div>
-    {{ $users_chunk }}
-</div>
+
 <div class="container">
-    <table class="table table-striped table-hover">
+    <table class="table table-striped table-hover table-sm">
         <thead>
           <tr>
             <th scope="col">No</th>
@@ -34,7 +32,7 @@
               </tr>
               <tr>
                   <td colspan="4">
-                    {{ $users->onEachSide(5)->links() }}
+                    {{ $users->links() }}
                 </td>
               </tr>
           </tfoot>

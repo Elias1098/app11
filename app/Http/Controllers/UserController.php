@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Post;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
+
+ use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -33,20 +35,28 @@ class UserController extends Controller
     return redirect('/login');
     }
 
-    function login(Request $request)
+    function login(Request $req)
     {
-        $user = User::where(['email'=>$request->email])->first();
-        //$user = User::findOrFail($request);
-        if(!$user || !Hash::check($request->password,$user->password))
+
+        //return $req->input();
+        $user= User::where(['email'=>$req->email])->first();
+        if(!$user || !Hash::check($req->password,$user->password))
         {
             return "Username or password is incorrect";
         }
         else
         {
-            $request->session()->put('user',$user);
-          return  redirect('/home');
+            //store session
+            $req->session()->put('user',$user);
+            //retrive posts by user id of one to many relationship
+            $user_id = session()->get('user')['id'];
+            $posts = User::find($user_id)->posts()
+                            ->where('user_id',$user_id)
+                            ->get();
+                      
+          return view('home',['posts'=>$posts]);
+          //return  view('/home');
         }
-
     }
 
     function users()
@@ -66,7 +76,7 @@ class UserController extends Controller
                           return $userss;
                           });
 
-          $users = DB::table('users')->paginate(6);
+       $users = DB::table('users')->paginate(6);
         return view('users',['users'=>$users,
                             'counts'=>$counts,
                             'min'=>$min,'max'=>$max,
@@ -79,12 +89,14 @@ class UserController extends Controller
     }
     function show($id)
     {
+        /*
         $user = DB::table('users')->find($id);
         if(!$user)
         return "Not found";
         else
         return  $user;
-       // $user = User::findOrFail($id);
+        */
+        $user = User::findOrFail($id);
         /*
         $user = DB::table('users')->where('id',$id)->get();
                     */
@@ -104,9 +116,9 @@ class UserController extends Controller
                 $user = DB::table('users')->groupBy('name')->having('id', '>', 2)->get();
                 */
         //  $user = DB::table('users')->distinct()->get();
-        return $user;
+        //return $user;
 
-        //return view('show',['user'=>$user]);
+        return view('show',['user'=>$user]);
     }
     function update(Request $request)
     {
@@ -133,5 +145,17 @@ class UserController extends Controller
     {
         DB::table('users')->where('id',$id)->delete();
         return redirect('users');
+    }
+
+    function posts()
+    {
+        if(session()->has('user'))
+        {
+            $user_id = session()->get('user')['id'];
+            $posts = User::find($user_id)->posts()
+                            ->where('user_id',$user_id)
+                            ->get();
+        return view('home',['posts'=>$posts]);
+        }
     }
 }
